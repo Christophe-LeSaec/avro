@@ -340,7 +340,19 @@ impl Serialize for Name {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.fullname(None))
+        match &self.namespace {
+            Some(namespace) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("name", &self.name)?;
+                map.serialize_entry("namespace", &namespace)?;
+                map.end()
+            }
+            None => {
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("name", &self.name)?;
+                map.end()
+            }
+        }
     }
 }
 
@@ -353,7 +365,6 @@ impl<'de> Deserialize<'de> for Name {
             use serde::de::Error;
             match value {
                 Value::Object(json) => Name::parse(&json).map_err(D::Error::custom),
-                Value::String(fullname) => Name::new(fullname.as_str()).map_err(D::Error::custom),
                 _ => Err(D::Error::custom(format!(
                     "Expected a json object: {:?}",
                     value
